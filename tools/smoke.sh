@@ -23,8 +23,8 @@ export SMOKE_ARGV="$work/argv.txt" SMOKE_STDIN="$work/stdin.txt"
 
 # 1. build with two tags and one build-arg
 dir="$work/build"; mkdir -p "$dir"
-printf '{"image": "registry.example.com/parcel", "tags": "1.4.0, latest", "buildArgs": "VERSION=1.4.0",\n "context": "."}' >"$dir/input.json"
-PATH="$work/bin:$PATH" run "$dir" >"$dir/log.txt" 2>&1 || fail "build run failed: $(cat "$dir/log.txt")"
+printf '{"image": "registry.example.com/parcel", "tags": "1.4.0, latest", "buildArgs": "VERSION=1.4.0",\n "context": ".", "dockerBinary": "%s/bin/docker"}' "$work" >"$dir/input.json"
+run "$dir" >"$dir/log.txt" 2>&1 || fail "build run failed: $(cat "$dir/log.txt")"
 [ "$(status "$dir")" = "success" ] || fail "not a success: $(cat "$dir/output.json")"
 [ "$(output "$dir" imageId)" = "sha256:abc123def456" ] || fail "image id: $(cat "$dir/output.json")"
 [ "$(output "$dir" tags)" = "registry.example.com/parcel:1.4.0,registry.example.com/parcel:latest" ] || fail "tags: $(cat "$dir/output.json")"
@@ -34,19 +34,19 @@ grep -q "push" "$work/argv.txt" && fail "push=false must not push"
 
 # 2. push with registry credentials: the password goes to stdin, never argv
 dir="$work/push"; mkdir -p "$dir"
-printf '{"image": "registry.example.com/parcel", "tags": "latest", "push": "true"}' >"$dir/input.json"
+printf '{"image": "registry.example.com/parcel", "tags": "latest", "push": "true",\n "dockerBinary": "%s/bin/docker"}' "$work" >"$dir/input.json"
 printf '{"registryUser": "robot", "registryPassword": "hunter2"}' >"$dir/.secrets.json"
-PATH="$work/bin:$PATH" run "$dir" >/dev/null 2>&1 || fail "push run failed: $(cat "$dir/output.json")"
+run "$dir" >/dev/null 2>&1 || fail "push run failed: $(cat "$dir/output.json")"
 grep -q "push registry.example.com/parcel:latest" "$work/argv.txt" || fail "push missing"
 grep -q -- "login registry.example.com" "$work/argv.txt" || fail "login missing"
 grep -q "hunter2" "$work/argv.txt" && fail "the password must not be in argv"
 grep -q "hunter2" "$work/stdin.txt" || fail "the password must reach docker through stdin"
 grep -q "hunter2" "$dir/output.json" && fail "the password must not be in the outputs"
 
-# 3. no docker on the agent is a clear environment error
+# 3. no docker on the agent is a clear environment error (a path that does not exist, not a PATH trick)
 dir="$work/nodocker"; mkdir -p "$dir"
-mkdir -p "$work/empty"; printf '{"image": "x/y"}' >"$dir/input.json"
-PATH="$work/empty:/usr/bin:/bin" run "$dir" >/dev/null 2>&1 && fail "missing docker must fail"
+printf '{"image": "x/y", "dockerBinary": "%s/no-such-docker"}' "$work" >"$dir/input.json"
+run "$dir" >/dev/null 2>&1 && fail "missing docker must fail"
 grep -q "docker CLI is not available" "$dir/output.json" || fail "message: $(cat "$dir/output.json")"
 
 echo "smoke ok: tags/build-args, push, password via stdin, missing docker"
