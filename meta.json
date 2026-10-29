@@ -1,0 +1,11 @@
+{
+  "name": "Docker build",
+  "summary": "Builds, tags and optionally pushes an image with the docker CLI.",
+  "author": "hummerstudio",
+  "license": "MIT",
+  "tags": [
+    "official-port",
+    "docker-build"
+  ],
+  "homepage": "https://github.com/hummerstudio/jenkins-atom-docker-build"
+}

@@ -1,0 +1,97 @@
+{
+  "atomCode": "docker-build",
+  "name": "Docker build",
+  "version": "1.0.0",
+  "description": "Builds, tags and optionally pushes an image with the docker CLI.",
+  "execution": {
+    "packagePath": "docker-build.jar",
+    "language": "java",
+    "target": "$atom_java_path -cp docker-build.jar com.jenkinschina.atom.sdk.AtomRunner"
+  },
+  "input": {
+    "image": {
+      "label": "镜像名（含 registry 前缀）",
+      "type": "vuex-input",
+      "default": ""
+    },
+    "dockerfile": {
+      "label": "Dockerfile 路径",
+      "type": "vuex-input",
+      "default": "Dockerfile"
+    },
+    "context": {
+      "label": "构建上下文",
+      "type": "vuex-input",
+      "default": "."
+    },
+    "tags": {
+      "label": "标签（逗号分隔）",
+      "type": "vuex-input",
+      "default": "latest"
+    },
+    "platform": {
+      "label": "平台（如 linux/amd64）",
+      "type": "vuex-input",
+      "default": ""
+    },
+    "buildArgs": {
+      "label": "build-arg（空格分隔 KEY=value）",
+      "type": "vuex-input",
+      "default": ""
+    },
+    "extraArgs": {
+      "label": "其它 docker build 参数",
+      "type": "vuex-input",
+      "default": ""
+    },
+    "push": {
+      "label": "构建后推送",
+      "type": "checkbox",
+      "default": "false"
+    },
+    "registryUser": {
+      "label": "registry 用户名（凭据 id）",
+      "type": "vuex-input",
+      "default": "",
+      "isSensitive": true
+    },
+    "registryPassword": {
+      "label": "registry 密码（凭据 id）",
+      "type": "vuex-input",
+      "default": "",
+      "isSensitive": true
+    }
+  },
+  "output": {
+    "imageId": {
+      "type": "string",
+      "description": "镜像 id"
+    },
+    "image": {
+      "type": "string",
+      "description": "主镜像名:tag"
+    },
+    "tags": {
+      "type": "string",
+      "description": "全部标签"
+    },
+    "pushed": {
+      "type": "string",
+      "description": "是否推送"
+    },
+    "count": {
+      "type": "string",
+      "description": "推送标签数"
+    }
+  },
+  "x-jenkins": {
+    "protocol": "jenkins-1",
+    "requires": {
+      "runner": ">=0.4.0"
+    },
+    "secrets": {
+      "registryUser": "",
+      "registryPassword": ""
+    }
+  }
+}
