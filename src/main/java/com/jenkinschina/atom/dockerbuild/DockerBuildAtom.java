@@ -37,11 +37,11 @@ public class DockerBuildAtom implements AtomTask {
         // platforms ignores what the caller put in PATH — the same trap that made the node atom pick the wrong node
         String docker = resolveBinary(context.getParam("dockerBinary", "docker"));
         if (docker == null) {
-            return AtomResult.error(ErrorType.SYSTEM, 40002,
+            return AtomResult.error(ErrorType.ENVIRONMENT, 40002,
                     "the docker CLI is not available or the daemon is not reachable on this agent");
         }
         if (!exec(workspace, context, docker, "version", "--format", "{{.Server.Version}}").ok()) {
-            return AtomResult.error(ErrorType.SYSTEM, 40002,
+            return AtomResult.error(ErrorType.ENVIRONMENT, 40002,
                     "the docker CLI is not available or the daemon is not reachable on this agent");
         }
 
