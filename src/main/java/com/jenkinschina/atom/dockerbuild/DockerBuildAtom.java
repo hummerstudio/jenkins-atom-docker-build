@@ -33,7 +33,14 @@ public class DockerBuildAtom implements AtomTask {
         boolean push = context.getBooleanParam("push", false);
         List<String> tags = split(context.getParam("tags", "latest"));
 
-        if (!exec(workspace, context, "docker", "version", "--format", "{{.Server.Version}}").ok()) {
+        // resolve the binary ourselves: the JVM looks a bare name up in the environment it inherited, which on some
+        // platforms ignores what the caller put in PATH — the same trap that made the node atom pick the wrong node
+        String docker = resolveBinary(context.getParam("dockerBinary", "docker"));
+        if (docker == null) {
+            return AtomResult.error(ErrorType.SYSTEM, 40002,
+                    "the docker CLI is not available or the daemon is not reachable on this agent");
+        }
+        if (!exec(workspace, context, docker, "version", "--format", "{{.Server.Version}}").ok()) {
             return AtomResult.error(ErrorType.SYSTEM, 40002,
                     "the docker CLI is not available or the daemon is not reachable on this agent");
         }
@@ -44,7 +51,7 @@ public class DockerBuildAtom implements AtomTask {
             wanted.add(image + ":" + tags.get(i));
         }
 
-        List<String> command = new ArrayList<>(List.of("docker", "build", "--file", dockerfile));
+        List<String> command = new ArrayList<>(List.of(docker, "build", "--file", dockerfile));
         for (String tag : wanted) {
             command.add("--tag");
             command.add(tag);
@@ -69,7 +76,7 @@ public class DockerBuildAtom implements AtomTask {
                     "docker build exited " + build.exitCode() + ": " + build.tail());
         }
 
-        String imageId = exec(workspace, context, "docker", "image", "inspect", "--format", "{{.Id}}",
+        String imageId = exec(workspace, context, docker, "image", "inspect", "--format", "{{.Id}}",
                 wanted.get(0)).output().strip();
         AtomResult result = AtomResult.success()
                 .data("imageId", imageId)
@@ -85,7 +92,7 @@ public class DockerBuildAtom implements AtomTask {
         String password = context.getSecret("registryPassword");
         if (user != null && !user.isBlank() && password != null && !password.isBlank() && !registry.isBlank()) {
             // --password-stdin so the credential never appears in argv
-            Result login = execWithStdin(workspace, context, password, "docker", "login", registry,
+            Result login = execWithStdin(workspace, context, password, docker, "login", registry,
                     "--username", user, "--password-stdin");
             if (!login.ok()) {
                 return AtomResult.error(ErrorType.THIRD_PART, 40004, "docker login to " + registry + " failed: "
@@ -94,13 +101,37 @@ public class DockerBuildAtom implements AtomTask {
         }
 
         for (String tag : wanted) {
-            Result pushed = exec(workspace, context, "docker", "push", tag);
+            Result pushed = exec(workspace, context, docker, "push", tag);
             if (!pushed.ok()) {
                 return AtomResult.error(ErrorType.THIRD_PART, 40005,
                         "docker push " + tag + " failed: " + pushed.tail());
             }
         }
         return result.data("pushed", "true").data("count", String.valueOf(wanted.size()));
+    }
+
+    /** Absolute path for a bare command name, or null when it is nowhere on PATH. */
+    private static String resolveBinary(String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        if (name.contains(java.io.File.separator)) {
+            return java.nio.file.Files.isExecutable(java.nio.file.Path.of(name)) ? name : null;
+        }
+        String path = System.getenv("PATH");
+        if (path == null) {
+            return null;
+        }
+        for (String entry : path.split(java.io.File.pathSeparator)) {
+            if (entry.isBlank()) {
+                continue;
+            }
+            java.nio.file.Path candidate = java.nio.file.Path.of(entry).resolve(name);
+            if (java.nio.file.Files.isExecutable(candidate)) {
+                return candidate.toAbsolutePath().toString();
+            }
+        }
+        return null;
     }
 
     private static List<String> split(String spec) {

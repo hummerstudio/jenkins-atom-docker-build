@@ -1,7 +1,7 @@
 {
   "atomCode": "docker-build",
   "name": "Docker build",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Builds, tags and optionally pushes an image with the docker CLI.",
   "execution": {
     "packagePath": "docker-build.jar",
@@ -60,6 +60,11 @@
       "type": "vuex-input",
       "default": "",
       "isSensitive": true
+    },
+    "dockerBinary": {
+      "label": "docker 可执行文件（留空用 PATH 里的 docker）",
+      "type": "vuex-input",
+      "default": "docker"
     }
   },
   "output": {
