@@ -181,6 +181,10 @@ public class DockerBuildAtom implements AtomTask {
             }
             int code = process.waitFor();
             return new Result(code, all.toString());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            context.log("[docker] could not run " + command[0] + ": " + e);
+            return new Result(-1, String.valueOf(e));
         } catch (Exception e) {
             context.log("[docker] could not run " + command[0] + ": " + e);
             return new Result(-1, String.valueOf(e));
