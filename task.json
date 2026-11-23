@@ -97,6 +97,7 @@
     "secrets": {
       "registryUser": "",
       "registryPassword": ""
-    }
+    },
+    "category": "build"
   }
 }
